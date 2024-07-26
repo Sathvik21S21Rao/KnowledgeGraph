@@ -1,0 +1,15 @@
+data_path: # folder or file containing the data
+chunk_size: 1024
+api_key:   # openai api key or groq api key. Use key if provided else uses ollama model specified.
+server:  # Groq or OpenAI or Ollama
+model:  # specify the model to use.
+temperature: 0
+create_graph: True #True if you want to create a new graph. Note that graph creation is expensive.
+node2vec_model_path: ./model/node2vec.model
+sentence_model_path: ./model/sentence.model
+sentence_embeddings_path: embeddings/sentence_embeddings.npy
+node_names_path: ./embeddings/node_names.npy
+sentence_model_name: all-MiniLM-L6-v2
+node2vec_embeddings_path: ./embeddings/node2vec_embeddings.npy
+faiss_model_path: ./model/faiss.index
+graph_file_path: ./graph/graph.pkl
