@@ -10,11 +10,11 @@ def softmax(x):
     e_x = np.exp(-x)
     return e_x / e_x.sum()
 
-class GraphNodestoEmbeddings:
+class SentenceGraphRetrieval:
     def __init__(self, graph, create, node2vec_model_path,sentence_model_path,node2vec_embeddings_path,sentence_embeddings_path,node_names_path,faiss_index_path,sentence_model_name='all-MiniLM-L6-v2',):
 
         self.graph = graph
-        self.is_created = create
+        self.is_created = False
         self.node2vec_model_path = node2vec_model_path
         self.sentence_model_name = sentence_model_name
         self.node_names_path=node_names_path
@@ -29,9 +29,9 @@ class GraphNodestoEmbeddings:
         self.faiss_index_path=faiss_index_path
 
         if self.is_created:
-            self._create_models()
-        else:
             self._load_models()
+        else:
+            self._create_models()
 
     def _load_models(self):
         
@@ -126,4 +126,3 @@ class GraphNodestoEmbeddings:
         for edge,description in edge_descriptions.items():
             context += f"{edge[0]} <-> {edge[1]}: {description}\n"
         return context
-
