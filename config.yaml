@@ -1,10 +1,12 @@
-data_path: # folder or file containing the data
-chunk_size: 1024
-api_key:   # openai api key or groq api key. Use key if provided else uses ollama model specified.
-server:  # Groq or OpenAI or Ollama
+data_path:  # folder or file containing the data
+chunk_size: 512
+chunk_overlap: 128
+api_key: # openai api key or groq api key. Use key if provided else uses ollama model specified.
+server:   # Groq or OpenAI or Ollama
 model:  # specify the model to use.
-temperature: 0
-create_graph: True #True if you want to create a new graph. Note that graph creation is expensive.
+temperature: 0.5
+create_graph: False #True if you want to create a new graph. Note that graph creation is expensive.
+use_node_vectorstore: True #True if you want to use vectorestore for storing nodes. Else use sentence transformers.
 node2vec_model_path: ./model/node2vec.model
 sentence_model_path: ./model/sentence.model
 sentence_embeddings_path: embeddings/sentence_embeddings.npy
@@ -13,3 +15,6 @@ sentence_model_name: all-MiniLM-L6-v2
 node2vec_embeddings_path: ./embeddings/node2vec_embeddings.npy
 faiss_model_path: ./model/faiss.index
 graph_file_path: ./graph/graph.pkl
+node_vectorstore_path: ./model/vectorstore
+collection_name: node_data
+node_data_dir: ./node_data

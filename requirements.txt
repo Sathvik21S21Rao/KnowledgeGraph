@@ -9,3 +9,6 @@ sentence-transformers
 node2vec
 tqdm
 faiss-cpu
+pysqlite-binary
+llama_index
+chromadb

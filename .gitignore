@@ -5,4 +5,7 @@ venv
 *.index
 *.pkl
 *.npy
-/data
+data
+vectorstore
+node_data
+.env
