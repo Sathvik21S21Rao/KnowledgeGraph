@@ -1,5 +1,6 @@
 langchain
 langchain_community
+llama_index
 langchain_core
 langchain_experimental
 langchain_openai
@@ -10,5 +11,5 @@ node2vec
 tqdm
 faiss-cpu
 pysqlite-binary
-llama_index
 chromadb
+matplotlib   
