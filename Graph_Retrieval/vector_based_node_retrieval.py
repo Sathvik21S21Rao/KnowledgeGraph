@@ -3,7 +3,6 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema.document import Document
 import sys
 from langchain_community.vectorstores import Chroma
-from langchain_community import embeddings
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.prompts import ChatPromptTemplate
 import os
@@ -11,7 +10,6 @@ from pydantic import BaseModel, Field
 from typing import List
 from gensim.models import Word2Vec
 from node2vec import Node2Vec
-from langchain_groq import ChatGroq
 import langchain_core.messages.ai
 from pydantic_core import from_json
 
@@ -23,7 +21,7 @@ class NodeOutput(BaseModel):
     node_names: List[str] = Field(description="The names of the relevant nodes", example=["node1", "node2", "node3"])
 
 class VectorBasedNodeRetrieval:
-    def __init__(self, llm, graph,node2vec_model_path,data_dir="node_data", persist_dir="./vectorstore", collection_name="node_data",create=False):
+    def __init__(self, llm, graph,node2vec_model_path,data_dir="node_data", persist_dir="./vectorstore", collection_name="node_data",create=False,embeddings=None):
         self.llm = llm
         self.data_dir = data_dir
         self.persist_dir = persist_dir
@@ -35,6 +33,7 @@ class VectorBasedNodeRetrieval:
         self.graph=graph
         self.node2vec_model_path=node2vec_model_path
         self.create=create
+        self.embeddings=embeddings
         
     def setup(self):
         if self.create:
@@ -61,7 +60,7 @@ class VectorBasedNodeRetrieval:
         self.vectorstore = Chroma.from_documents(
             documents=docs,
             collection_name=self.collection_name,
-            embedding=embeddings.OllamaEmbeddings(model='nomic-embed-text'),
+            embedding=self.embeddings,
             persist_directory=self.persist_dir
         )
         
@@ -81,7 +80,7 @@ class VectorBasedNodeRetrieval:
         if os.path.exists(self.persist_dir):
             self.vectorstore = Chroma(
                 persist_directory=self.persist_dir,
-                embedding_function=embeddings.OllamaEmbeddings(model='nomic-embed-text'),
+                embedding_function=self.embeddings,
                 collection_name=self.collection_name
             )
         else:
@@ -96,7 +95,7 @@ class VectorBasedNodeRetrieval:
         if self.vectorstore is None:
             raise ValueError("Vectorstore not loaded. Load the vectorstore before retrieving nodes.")
         
-        question = f"""Find all the nodes related to the following query based on the context\n\nQuery: {query}.Do not hallucinate new nodes. If the query is not related to any node, return an empty list."""
+        question = f"""Find all the nodes related to the following query based on the context.\n\nQuery: {query}.Do not hallucinate new nodes. If the query is not related to any node, return an empty list."""
         retriever = self.vectorstore.as_retriever()
         
         template = """Answer the question based only on the following context and chat history:
