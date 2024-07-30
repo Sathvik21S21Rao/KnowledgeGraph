@@ -1,13 +1,12 @@
 retrieve_nodes_prompt = """
 -Goal-
-To retrieve nodes related to a query based on the given context.
+The goal is to retrieve nodes in a graph so as to answer the query.
 -Instructions-
-1.Retrive the related nodes based only on the following context and chat history.
+1.Retrieve the nodes that are required to answer the query. You can refer the chat history for corefoerence resolution.
 2. The nodes must be retrieved must be relavant to the query
 2.Return the output as shown in the example. Do not use the nodes in the example as context.
 3.Do not hallucinate new nodes. If the query is not related to any node, return an empty list.
-4.If the query requests for a summary of the entire doc, return all the nodes.
-        
+4. In case the query asks for a summary return all the nodes
 Example output:
 {{"node_names": ["node1", "node2", "node3"]}}
         
@@ -20,3 +19,4 @@ Query: {query}
 
 Output:
 """
+

@@ -9,3 +9,4 @@ data
 vectorstore
 node_data
 .env
+community_data

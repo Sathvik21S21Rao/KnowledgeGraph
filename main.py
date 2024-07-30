@@ -51,6 +51,7 @@ create_graph = config.get("create_graph", False)
 graph_file_path = config.get("graph_file_path")
 node2vec_model_path = config.get("node2vec_model_path")
 node_data_dir = config.get("node_data_dir")
+community_data_dir = config.get("community_data_dir")
 node_vectorstore_path = config.get("node_vectorstore_path")
 collection_name = config.get("collection_name")
 chunk_size = config.get("chunk_size")
@@ -94,10 +95,11 @@ def main():
                 console.print("[bold red]Graph file not found. Please create the graph first.[/bold red]")
                 return
     
-    with console.status("[bold green]Initializing embeddings..."):
+    with console.status("[bold green]Initializing embeddings and creating communities..."):
         if embeddings is not None:
-            obj = ContextBasedNodeRetrieval(llm, graph, node2vec_model_path, node_data_dir, node_vectorstore_path, collection_name, create_graph,embeddings)
+            obj = ContextBasedNodeRetrieval(llm, graph, node2vec_model_path, node_data_dir, community_data_dir, create_graph,embeddings)
             obj.setup()
+            
         else:
             obj = SentenceGraphRetrieval(
                 graph, create_graph, node2vec_model_path,

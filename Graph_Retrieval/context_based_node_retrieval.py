@@ -8,31 +8,31 @@ from node2vec import Node2Vec
 import langchain_core.messages.ai
 from pydantic_core import from_json
 from Graph_Retrieval.prompts import *
+from Community_Generation.communitySummary import *
 
 
 class NodeOutput(BaseModel):
     node_names: List[str] = Field(description="The names of the relevant nodes", example=["node1", "node2", "node3"])
 
 class ContextBasedNodeRetrieval:
-    def __init__(self, llm, graph,node2vec_model_path,data_dir="node_data", persist_dir="./vectorstore", collection_name="node_data",create=False,embeddings=None):
+    def __init__(self, llm, graph,node2vec_model_path,data_dir="node_data",community_data="community_data",create=False,embeddings=None):
         self.llm = llm
         self.data_dir = data_dir
-        self.persist_dir = persist_dir
-        self.collection_name = collection_name
-        # self.vectorstore = None
-        self.chunk_size = 512
-        self.chunk_overlap = 200
+        self.community_data=community_data
         self.chat_history = []
         self.graph=graph
         self.node2vec_model_path=node2vec_model_path
         self.create=create
         self.embeddings=embeddings
+        self.community=CommunitySummary(self.graph,self.llm,self.community_data,self.create)
+        
         
     def setup(self):
         if self.create:
             self._create_models()
         else:
             self._load_models()
+
     def _save_and_index_documents(self):
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir)
@@ -41,7 +41,6 @@ class ContextBasedNodeRetrieval:
             for node in self.graph.nodes():
                 f.write(f"{node}\n")
 
-        
         
         
     def _create_node2vec_model(self):
@@ -54,10 +53,9 @@ class ContextBasedNodeRetrieval:
     def _create_models(self):
         self._save_and_index_documents()
         self._create_node2vec_model()
+        
 
     def _load_models(self):
-        
-        
         
         if self.node2vec_model_path:
             self.node2vec_model = Word2Vec.load(self.node2vec_model_path)
@@ -69,29 +67,25 @@ class ContextBasedNodeRetrieval:
         
         template = retrieve_nodes_prompt
         
-        # Create a prompt using the ChatPromptTemplate
         prompt = ChatPromptTemplate.from_template(template)
         
-        # Define the RAG chain
         rag_chain = (
             {"context": RunnablePassthrough(), "query": RunnablePassthrough(), "chat_history": RunnablePassthrough()}
             | prompt
             | self.llm
         )
         
-        # Invoke the RAG chain with the query and chat history
         response = rag_chain.invoke({"context": open(f"{self.data_dir}/node.txt").read(), "query": query, "chat_history": self.chat_history[-5:]})
         
-        # Handle the response
         if isinstance(response, langchain_core.messages.ai.AIMessage):
             response = response.content
         
-        # Extract the JSON object from the response
         response = response[response.find("{"):response.rfind("}") + 1]
         
-        # Validate and parse the response
         response = NodeOutput.model_validate(from_json(response, allow_partial=True))
-        print(response)
+
+        
+        
         return response
 
     def _get_node_descriptions(self, nodes)->dict:
@@ -121,9 +115,18 @@ class ContextBasedNodeRetrieval:
     def get_context(self, query, score_thresh=0.8)->str:
         
         similar_nodes=self._retrieve_nodes(query)
+        context=""
         
+        if len(similar_nodes.node_names)/len(self.graph.nodes)>0.4:
+            for node in similar_nodes.node_names:
+                if self.community.node_to_community_mapping.get(node):
+                    load_community=self.community.load_community(self.community.node_to_community_mapping[node])
+                    context+=f"Community: {load_community.community_name}\nDescription: {load_community.community_description}\n"
+            return context
+            
         similar_nodes=self._enrich_nodes(similar_nodes,score_thresh)
         similar_edges=self._retrieve_edges(similar_nodes)
+        
         node_descriptions = self._get_node_descriptions(similar_nodes)
         edge_descriptions = self._get_edge_descriptions(similar_edges)
         context = "Nodes and their descriptions:\n"
