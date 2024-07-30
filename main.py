@@ -4,7 +4,8 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.markdown import Markdown
 import os
-
+import warnings
+warnings.filterwarnings("ignore")
 console = Console()
 
 def read_config(file_path):
@@ -23,6 +24,21 @@ def initialize_llm(config):
         return ChatGroq(temperature=config["temperature"], model=config["model"], api_key=config.get("api_key"))
     else:
         raise ValueError("Invalid server configuration")
+    
+def initialize_embedding_model(config):
+    embedding_server = config.get("embedding_server").lower()
+    if embedding_server=="ollama":
+        from langchain_community import embeddings
+        return embeddings.OllamaEmbeddings(model=config.get("embedding_model",""))
+    elif embedding_server=="huggingface":
+        from langchain_community import embeddings
+        return embeddings.HuggingFaceEmbeddings(model=config.get("embedding_model",""))
+    elif embedding_server=="openai":
+        from langchain_community import embeddings
+        return embeddings.OpenAIEmbeddings(model=config.get("embedding_model",""),api_key=config.get("api_key"))
+    elif embedding_server=="local":
+        return None
+
 
 # Load configuration
 config = read_config('config.yaml')
@@ -33,7 +49,6 @@ llm = initialize_llm(config)
 # Other variables
 create_graph = config.get("create_graph", False)
 graph_file_path = config.get("graph_file_path")
-use_node_vectorstore = config.get("use_node_vectorstore", False)
 node2vec_model_path = config.get("node2vec_model_path")
 node_data_dir = config.get("node_data_dir")
 node_vectorstore_path = config.get("node_vectorstore_path")
@@ -47,11 +62,13 @@ node_names_path = config.get("node_names_path")
 faiss_model_path = config.get("faiss_model_path")
 sentence_model_name = config.get("sentence_model_name")
 
+embeddings=initialize_embedding_model(config)
+
 from Graph_Generation.graph_extraction import *
 import networkx as nx
 import pickle
 from Graph_Retrieval.sentence_graph_retrieval import SentenceGraphRetrieval
-from Graph_Retrieval.vector_based_node_retrieval import VectorBasedNodeRetrieval
+from Graph_Retrieval.context_based_node_retrieval import ContextBasedNodeRetrieval
 from Graph_Retrieval.query import Query
 
 def main():
@@ -78,8 +95,8 @@ def main():
                 return
     
     with console.status("[bold green]Initializing embeddings..."):
-        if use_node_vectorstore:
-            obj = VectorBasedNodeRetrieval(llm, graph, node2vec_model_path, node_data_dir, node_vectorstore_path, collection_name, create_graph)
+        if embeddings is not None:
+            obj = ContextBasedNodeRetrieval(llm, graph, node2vec_model_path, node_data_dir, node_vectorstore_path, collection_name, create_graph,embeddings)
             obj.setup()
         else:
             obj = SentenceGraphRetrieval(
@@ -94,21 +111,21 @@ def main():
     while True:
         query = Prompt.ask("[bold cyan]You")
         if query.lower() == 'exit':
-            console.print(Panel("[bold green]Chatbot: Goodbye![/bold green]", expand=False))
+            console.print(Panel("[bold green]Chatbot: Goodbye![/bold green]", expand=True))
             break
         
         with console.status("[bold green]Thinking..."):
             context = obj.get_context(query=query)
             
-            if isinstance(obj, VectorBasedNodeRetrieval):
-                console.print(Panel(Markdown(f"**Context:** {context}"), expand=False))
+            if isinstance(obj, ContextBasedNodeRetrieval):
+                # console.print(Panel(Markdown(f"**Context:** {context}"), expand=True))
                 response = Query(context, query, llm,chat_history=obj.chat_history).execute_query()
                 obj.chat_history.append({"question": query, "response": response})
             else:
                 
                 response = Query(context, query, llm, chat_history=[]).execute_query()
                 
-        console.print(Panel(Markdown(f"**Chatbot:** {response}"), expand=False))
+        console.print(Panel(Markdown(f"**Chatbot:** {response}"), expand=True))
 
 if __name__ == "__main__":
     main()

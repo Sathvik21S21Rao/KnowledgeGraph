@@ -36,7 +36,6 @@ class GraphExtractionChain:
        
         try:
             
-            print(from_json(response,allow_partial=True))
             return Entity_type.model_validate(from_json(response,allow_partial=True))
         except Exception as e:
             if(retries>0):
@@ -51,7 +50,6 @@ class GraphExtractionChain:
         response=response[response.find("{"):response.rfind("}")+1]
 
         try:
-            print(from_json(response,allow_partial=True))
             return Entity.model_validate(from_json(response,allow_partial=True))
         except:
             if(retries>0):
@@ -69,7 +67,6 @@ class GraphExtractionChain:
         response=response[response.find("{"):response.rfind("}")+1]
         
         try:
-            print(eval(response))
             return Relation.model_validate(eval(response))
         except Exception as e:
             if(retries>0):
@@ -119,7 +116,7 @@ class PrepareDataForNX:
         final_entities={}
         final_relations={}
        
-        with tqdm(total=len(data), desc="Processing Chunks", unit="chunk") as pbar:
+        with tqdm(total=len(data), desc="Processing Chunks", unit="chunk",position=0, leave=True) as pbar:
             for i in range(len(data)):
                 text=data[i]
                 entities,relations=chain.execute(text,",".join(list(final_entities.keys())))

@@ -1,8 +1,3 @@
-from llama_index.core import SimpleDirectoryReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema.document import Document
-import sys
-from langchain_community.vectorstores import Chroma
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.prompts import ChatPromptTemplate
 import os
@@ -12,21 +7,19 @@ from gensim.models import Word2Vec
 from node2vec import Node2Vec
 import langchain_core.messages.ai
 from pydantic_core import from_json
+from Graph_Retrieval.prompts import *
 
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 class NodeOutput(BaseModel):
     node_names: List[str] = Field(description="The names of the relevant nodes", example=["node1", "node2", "node3"])
 
-class VectorBasedNodeRetrieval:
+class ContextBasedNodeRetrieval:
     def __init__(self, llm, graph,node2vec_model_path,data_dir="node_data", persist_dir="./vectorstore", collection_name="node_data",create=False,embeddings=None):
         self.llm = llm
         self.data_dir = data_dir
         self.persist_dir = persist_dir
         self.collection_name = collection_name
-        self.vectorstore = None
+        # self.vectorstore = None
         self.chunk_size = 512
         self.chunk_overlap = 200
         self.chat_history = []
@@ -49,20 +42,6 @@ class VectorBasedNodeRetrieval:
                 f.write(f"{node}\n")
 
         
-    
-        document_loader = SimpleDirectoryReader(self.data_dir)
-        docs = document_loader.load_data()
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
-    
-        text = '\n'.join([x.text for x in docs]) + "\n"
-        chunks = text_splitter.split_text(text)
-        docs = [Document(page_content=chunk) for chunk in chunks]
-        self.vectorstore = Chroma.from_documents(
-            documents=docs,
-            collection_name=self.collection_name,
-            embedding=self.embeddings,
-            persist_directory=self.persist_dir
-        )
         
         
     def _create_node2vec_model(self):
@@ -77,14 +56,8 @@ class VectorBasedNodeRetrieval:
         self._create_node2vec_model()
 
     def _load_models(self):
-        if os.path.exists(self.persist_dir):
-            self.vectorstore = Chroma(
-                persist_directory=self.persist_dir,
-                embedding_function=self.embeddings,
-                collection_name=self.collection_name
-            )
-        else:
-            raise FileNotFoundError("Vectorstore not found. Either create the vectorstore or provide the correct path in the config file.")
+        
+        
         
         if self.node2vec_model_path:
             self.node2vec_model = Word2Vec.load(self.node2vec_model_path)
@@ -92,39 +65,35 @@ class VectorBasedNodeRetrieval:
             raise FileNotFoundError("Node2Vec model not found. Either create the model or provide the correct path in the config file.")
 
     def _retrieve_nodes(self, query):
-        if self.vectorstore is None:
-            raise ValueError("Vectorstore not loaded. Load the vectorstore before retrieving nodes.")
         
-        question = f"""Find all the nodes related to the following query based on the context.\n\nQuery: {query}.Do not hallucinate new nodes. If the query is not related to any node, return an empty list."""
-        retriever = self.vectorstore.as_retriever()
         
-        template = """Answer the question based only on the following context and chat history:
-        Return the output as shown in the example
-        Example output:
-        {{"node_names": ["node1", "node2", "node3"]}}
-        Context: {context}
-        Chat History: {chat_history}
-        Question: {question}
-        Output:
-        """
+        template = retrieve_nodes_prompt
         
+        # Create a prompt using the ChatPromptTemplate
         prompt = ChatPromptTemplate.from_template(template)
         
-        
-        
+        # Define the RAG chain
         rag_chain = (
-            {"context": retriever, "question": RunnablePassthrough(), "chat_history": RunnablePassthrough()}
+            {"context": RunnablePassthrough(), "query": RunnablePassthrough(), "chat_history": RunnablePassthrough()}
             | prompt
             | self.llm
         )
         
-        response = rag_chain.invoke({"context": query, "chat_history": self.chat_history, "question": question})
+        # Invoke the RAG chain with the query and chat history
+        response = rag_chain.invoke({"context": open(f"{self.data_dir}/node.txt").read(), "query": query, "chat_history": self.chat_history[-5:]})
+        
+        # Handle the response
         if isinstance(response, langchain_core.messages.ai.AIMessage):
             response = response.content
-        response=response[response.find("{"):response.rfind("}")]+"}"
+        
+        # Extract the JSON object from the response
+        response = response[response.find("{"):response.rfind("}") + 1]
+        
+        # Validate and parse the response
         response = NodeOutput.model_validate(from_json(response, allow_partial=True))
+        print(response)
         return response
-    
+
     def _get_node_descriptions(self, nodes)->dict:
         return {node:self.graph.nodes[node].get("description") for node in nodes}
     
