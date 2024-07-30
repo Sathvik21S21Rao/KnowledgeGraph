@@ -1,20 +1,22 @@
-data_path:  # folder or file containing the data
+data_path: data # folder or file containing the data
 chunk_size: 512
 chunk_overlap: 128
-api_key: # openai api key or groq api key. Use key if provided else uses ollama model specified.
+api_key:  # openai api key or groq api key. Use key if provided else uses ollama model specified.
 server:   # Groq or OpenAI or Ollama
 model:  # specify the model to use.
-temperature: 0.5
-create_graph: False #True if you want to create a new graph. Note that graph creation is expensive.
-use_node_vectorstore: True #True if you want to use vectorestore for storing nodes. Else use sentence transformers.
+temperature: 0
+embedding_server:  # ollama or huggingface or openai or local. local does not use chromadb.
+embedding_model:  # emebdding model to use in the particular server
+create_graph: True #True if you want to create a new graph. Note that graph creation is expensive.
 node2vec_model_path: ./model/node2vec.model
 sentence_model_path: ./model/sentence.model
+node2vec_embeddings_path: ./embeddings/node2vec_embeddings.npy
+graph_file_path: ./graph/graph.pkl
+collection_name: node_data
+node_data_dir: ./node_data
+community_data_dir: ./community_data
+# The following are used for the sentence embeddings,in case embedding_server is local
 sentence_embeddings_path: embeddings/sentence_embeddings.npy
 node_names_path: ./embeddings/node_names.npy
 sentence_model_name: all-MiniLM-L6-v2
-node2vec_embeddings_path: ./embeddings/node2vec_embeddings.npy
 faiss_model_path: ./model/faiss.index
-graph_file_path: ./graph/graph.pkl
-node_vectorstore_path: ./model/vectorstore
-collection_name: node_data
-node_data_dir: ./node_data

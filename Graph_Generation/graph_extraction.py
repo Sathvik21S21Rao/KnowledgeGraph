@@ -116,7 +116,7 @@ class PrepareDataForNX:
         final_entities={}
         final_relations={}
        
-        with tqdm(total=len(data), desc="Processing Chunks", unit="chunk",position=0, leave=True) as pbar:
+        with tqdm(total=len(data), desc="Processing Chunks", unit="chunk",position=0, leave=False) as pbar:
             for i in range(len(data)):
                 text=data[i]
                 entities,relations=chain.execute(text,",".join(list(final_entities.keys())))
