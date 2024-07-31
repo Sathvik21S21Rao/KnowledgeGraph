@@ -118,10 +118,14 @@ class ContextBasedNodeRetrieval:
         context=""
         
         if len(similar_nodes.node_names)/len(self.graph.nodes)>0.4:
+            communities=set()
             for node in similar_nodes.node_names:
+                print(self.community.node_to_community_mapping)
                 if self.community.node_to_community_mapping.get(node):
-                    load_community=self.community.load_community(self.community.node_to_community_mapping[node])
-                    context+=f"Community: {load_community.community_name}\nDescription: {load_community.community_description}\n"
+                    communities.add(self.community.node_to_community_mapping[node])
+            for community in communities:
+                community=self.community.load_community(community)
+                context+=f"Community: {community.community_name}\n Description: {community.community_description}\n"
             return context
             
         similar_nodes=self._enrich_nodes(similar_nodes,score_thresh)
