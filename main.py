@@ -1,10 +1,12 @@
 import yaml
+import argparse
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.markdown import Markdown
 import os
 import warnings
+
 warnings.filterwarnings("ignore")
 console = Console()
 
@@ -39,7 +41,6 @@ def initialize_embedding_model(config):
     elif embedding_server=="local":
         return None
 
-
 # Load configuration
 config = read_config('config.yaml')
 
@@ -47,7 +48,6 @@ config = read_config('config.yaml')
 llm = initialize_llm(config)
 
 # Other variables
-create_graph = config.get("create_graph", False)
 graph_file_path = config.get("graph_file_path")
 node2vec_model_path = config.get("node2vec_model_path")
 node_data_dir = config.get("node_data_dir")
@@ -62,8 +62,9 @@ sentence_embeddings_path = config.get("sentence_embeddings_path")
 node_names_path = config.get("node_names_path")
 faiss_model_path = config.get("faiss_model_path")
 sentence_model_name = config.get("sentence_model_name")
+use_sentence_embeddings = config.get("use_sentence_embeddings")
 
-embeddings=initialize_embedding_model(config)
+
 
 from Graph_Generation.graph_extraction import *
 import networkx as nx
@@ -72,13 +73,13 @@ from Graph_Retrieval.sentence_graph_retrieval import SentenceGraphRetrieval
 from Graph_Retrieval.context_based_node_retrieval import ContextBasedNodeRetrieval
 from Graph_Retrieval.query import Query
 
-def main():
+def main(create_graph):
     console.print(Panel.fit("[bold magenta]GraphRAG![/bold magenta]"))
     
     if create_graph:
         with console.status("[bold green]Creating graph..."):
             chain = GraphExtractionChain(llm=llm)
-            data = DataLoader(path=config["data_path"], chunk_size=chunk_size,chunk_overlap=chunk_overlap).load()
+            data = DataLoader(path=config["data_path"], chunk_size=chunk_size, chunk_overlap=chunk_overlap).load()
             NxData = PrepareDataForNX().execute(data, chain)
             graph = nx.Graph()
             graph.add_nodes_from(NxData[0])
@@ -96,10 +97,9 @@ def main():
                 return
     
     with console.status("[bold green]Initializing embeddings and creating communities..."):
-        if embeddings is not None:
-            obj = ContextBasedNodeRetrieval(llm, graph, node2vec_model_path, node_data_dir, community_data_dir, create_graph,embeddings)
+        if not use_sentence_embeddings:
+            obj = ContextBasedNodeRetrieval(llm, graph, node2vec_model_path, node_data_dir, community_data_dir, create_graph)
             obj.setup()
-            
         else:
             obj = SentenceGraphRetrieval(
                 graph, create_graph, node2vec_model_path,
@@ -120,14 +120,17 @@ def main():
             context = obj.get_context(query=query)
             
             if isinstance(obj, ContextBasedNodeRetrieval):
-                # console.print(Panel(Markdown(f"**Context:** {context}"), expand=True))
-                response = Query(context, query, llm,chat_history=obj.chat_history).execute_query()
+                response = Query(context, query, llm, chat_history=obj.chat_history).execute_query()
                 obj.chat_history.append({"question": query, "response": response})
             else:
-                
                 response = Query(context, query, llm, chat_history=[]).execute_query()
                 
         console.print(Panel(Markdown(f"**Chatbot:** {response}"), expand=True))
 
 if __name__ == "__main__":
-    main()
+    create_graph=input("Create a new graph? (y/n): ")
+    if create_graph.lower() == 'y':
+        create_graph = True
+    else:
+        create_graph = False
+    main(create_graph)
