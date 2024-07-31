@@ -1,13 +1,11 @@
-data_path: data # folder or file containing the data
+data_path: # folder or file containing the data
 chunk_size: 512
 chunk_overlap: 128
-api_key:  # openai api key or groq api key. Use key if provided else uses ollama model specified.
-server:   # Groq or OpenAI or Ollama
+api_key:   # openai api key or groq api key. Use key if provided else uses ollama model specified.
+server:    # Groq or OpenAI or Ollama
 model:  # specify the model to use.
-temperature: 0
-embedding_server:  # ollama or huggingface or openai or local. local does not use chromadb.
-embedding_model:  # emebdding model to use in the particular server
-create_graph: True #True if you want to create a new graph. Note that graph creation is expensive.
+temperature: 0.5
+use_sentence_embeddings: False #True if you want to use sentence embeddings
 node2vec_model_path: ./model/node2vec.model
 sentence_model_path: ./model/sentence.model
 node2vec_embeddings_path: ./embeddings/node2vec_embeddings.npy
