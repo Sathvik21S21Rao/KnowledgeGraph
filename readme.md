@@ -14,6 +14,7 @@ The project is structured as follows:
 
 ## How to Run
 
+### Tested to be working on python 3.8 versions
 1. **Clone the repository**
 ```bash
 git clone https://github.com/Sathvik21S21Rao/KnowledgeGraph.git
@@ -28,12 +29,17 @@ docker build -t graphrag .
 
 4. **Run the docker container** in interactive mode
 ```bash
-docker run -it graphrag
+docker run -it --mount source=VOLUME_NAME, target=/app graphrag
 ```
 
 5. In case you are running an **Ollama model locally**
 ```bash
 docker run -it --network host graphrag
+```
+
+6. In case you want to run it in your system
+```bash
+pip install -r requirements.txt
 ```
 
 ## Configuration
