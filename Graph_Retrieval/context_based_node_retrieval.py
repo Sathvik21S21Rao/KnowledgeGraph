@@ -122,7 +122,7 @@ class ContextBasedNodeRetrieval:
             for node in similar_nodes.node_names:
                 print(self.community.node_to_community_mapping)
                 if self.community.node_to_community_mapping.get(node):
-                    communities.add(self.community.node_to_community_mapping[node])
+                    communities.add(self.community.node_to_community_mapping[node][1])
             for community in communities:
                 community=self.community.load_community(community)
                 context+=f"Community: {community.community_name}\n Description: {community.community_description}\n"

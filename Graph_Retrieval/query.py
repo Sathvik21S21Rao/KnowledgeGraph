@@ -1,5 +1,6 @@
 from langchain_core.prompts import PromptTemplate
 import langchain_core.messages.ai
+from Graph_Retrieval.prompts import query_template
 class Query:
     def __init__(self,context,query,llm,chat_history):
         self.context=context
@@ -7,8 +8,8 @@ class Query:
         self.llm=llm
         self.chat_history=chat_history
     def format_query(self):
-        template="""Based on the following context answer the query and the following chat history\n\nContext:{context}\n\nChat history:{chat_history}\n\n Query: {query}"""
-        return PromptTemplate(template=template,input_variables=["context","query","chat_history"])
+        
+        return PromptTemplate(template=query_template,input_variables=["context","query","chat_history"])
     def execute_query(self):
         chain=self.format_query() | self.llm
         response= chain.invoke({"context":self.context,"query":self.query,"chat_history":self.chat_history})

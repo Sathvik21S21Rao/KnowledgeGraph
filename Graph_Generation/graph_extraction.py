@@ -10,8 +10,9 @@ from pydantic import BaseModel,Field
 from typing import List, Tuple
 from Graph_Generation.prompts import ENTITY_TYPE_PROMPT,ENTITY_EXTRACTION_PROMPT,RELATION_PROMPT
 from tqdm import tqdm
+import pickle
+
 class Entity_type(BaseModel):
-    
     entity_type :list =Field(description="The entity types found",example=["type1","type2"])
 
 class Entity(BaseModel):
@@ -104,45 +105,88 @@ class PrepareDataForNX:
     def __init__(self):
         pass
 
-    def transform_dict_to_nx_format(self,dictionary,relation=False):
+    @staticmethod
+    def transform_dict_to_nx_format(dictionary,relation=False):
         keys=list(dictionary.keys())
-        vals=[{"description":dictionary[key]} for key in keys]
+        vals=[{"description":dictionary[key][0],"chunk_ids":dictionary[key][1]} for key in keys]
         if relation:
             temp=list(zip(*keys))
             return list(zip(temp[0],temp[1],vals))
         return list(zip(keys,vals))
     
-    def load_data_from_llm(self,data,chain:GraphExtractionChain):
-        final_entities={}
-        final_relations={}
+    @staticmethod
+    def load_data_from_llm(data,chain:GraphExtractionChain,final_entities={},final_relations={},start_chunk=0):
+        
        
-        with tqdm(total=len(data), desc="Processing Chunks", unit="chunk",position=0, leave=False) as pbar:
+        with tqdm(total=len(data), desc="Processing Chunks", unit="chunk",position=0, leave=True) as pbar:
             for i in range(len(data)):
                 text=data[i]
                 entities,relations=chain.execute(text,",".join(list(final_entities.keys())))
                 for entity,description in zip(entities.entity_name,entities.entity_description):
                     
                     if final_entities.get(entity):
-                        final_entities[entity.lower()]+=description
+                        final_entities[entity.lower()][0]+=description
+                        final_entities[entity.lower()][1].append(i+start_chunk)
                     else:
-                        final_entities[entity.lower()]=description
+                        final_entities[entity.lower()]=[description,[i+start_chunk]]
 
                 for relation in relations.relation:
                     if final_relations.get((relation[0].lower(),relation[1].lower())):
-                        final_relations[(relation[0].lower(),relation[1].lower())]+="."+relation[2]
+                        final_relations[(relation[0].lower(),relation[1].lower())][0]+="."+relation[2]
+                        final_relations[(relation[0].lower(),relation[1].lower())][1].append(i+start_chunk)
+
                     else:
-                        final_relations[(relation[0].lower(),relation[1].lower())]=relation[2]
+                        final_relations[(relation[0].lower(),relation[1].lower())]=[relation[2],[i+start_chunk]]
                 pbar.update(1)
-                pbar.set_postfix({"Current Chunk": i+1, "Remaining": len(data) - (i+1)})
+                pbar.set_postfix({"Current Chunk": i+1+start_chunk, "Remaining": len(data) - (i+1+start_chunk)})
         return final_entities,final_relations
         
     def execute(self,data,chain):
-        self.entities,self.relations=self.load_data_from_llm(data,chain)
-        entities=self.transform_dict_to_nx_format(self.entities)
-        relations=self.transform_dict_to_nx_format(self.relations,relation=True)
+        self.entities,self.relations=PrepareDataForNX.load_data_from_llm(data,chain)
+        entities=PrepareDataForNX.transform_dict_to_nx_format(self.entities)
+        relations=PrepareDataForNX.transform_dict_to_nx_format(self.relations,relation=True)
         return entities,relations
+    
+class UpdateGraph(PrepareDataForNX):
+    def __init__(self,graph_path):
+        self.graph_path=graph_path
+        self.load_graph()
+    
+    def update_graph(self,entities,relations):
+        updated_nodes=[]
+        added_nodes=[]
+        for entity in entities:
+            if self.graph.has_node(entity[0]):
+                self.graph.nodes[entity[0]]["description"]+=entity[1]["description"]
+                self.graph.nodes[entity[0]]["chunk_ids"]+=entity[1]["chunk_ids"]
+                updated_nodes.append(entity[0])
+            else:
+                self.graph.add_node(entity)
+                added_nodes.append(entity)
+
+        self.graph.add_edges_from(relations)
+        added_edges=[(relation[0],relation[1]) for relation in relations ]
+
+    def load_graph(self):
+        with open(self.graph_path,"r") as fh:
+            self.graph=pickle.load(self.graph_path)
+    
+    def save_graph(self):
+        with open(self.graph_path,"w") as fh:
+            pickle.dump(self.graph,fh)
+    
+    def execute(self,data,chain):
+        self.entities,self.relations=PrepareDataForNX.load_data_from_llm(data,chain,self.graph.nodes(),self.graph.edges())
+        entities=PrepareDataForNX.transform_dict_to_nx_format(self.entities)
+        relations=PrepareDataForNX.transform_dict_to_nx_format(self.relations,relation=True)
+        updated_nodes,added_nodes,added_edges=self.update_graph(entities=entities,relations=relations)
+        self.save_graph()
+        return updated_nodes,added_nodes,added_edges
+        
 
 
+    
+    
 
 
 

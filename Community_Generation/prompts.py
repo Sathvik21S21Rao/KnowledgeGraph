@@ -18,3 +18,28 @@ Given a community with nodes along with their description, Generate a summary of
 Output:
 """
 
+update_community_prompt = """
+-Goal-
+Given a community summary and updated nodes, integrate the changes from the updated nodes into the existing summary.
+
+-Instructions-  
+1. Compare the existing summary with the updated nodes to identify changes.
+2. Do not provide explanations or reasoning for the output.
+3. Ensure that information is not repeated between the updated nodes and the existing summary. Avoid redundancy.
+4. Return only the new sentences, specifying the exact indices where they should be inserted within the existing summary.
+5. Do not repeat or rewrite the entire summary; only return the new sentences and their corresponding indices.
+
+-Example Output-  
+
+{
+  "new_sentences": ["India is known for its diverse landscapes, languages, and traditions."],
+  "indices": [2]
+}
+
+
+**Input:**  
+Existing Summary: {existing_summary}  
+Updated Nodes: {updated_nodes}
+
+"""
+

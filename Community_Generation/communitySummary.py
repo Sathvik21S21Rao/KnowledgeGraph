@@ -5,12 +5,18 @@ import pickle
 from langchain_core.prompts import PromptTemplate
 from pydantic_core import from_json
 from pydantic import BaseModel,Field
+from pydantic.types import List
 from Community_Generation.prompts import *
 from langchain_core.messages.ai import AIMessage
 
 class Community(BaseModel):
     community_name:str=Field(description="The name of the community",example="Community1")
     community_description:str=Field(description="The description of the community",example="Description of the community")
+
+class Update_Community(BaseModel):
+    new_sentences:List[str]=Field(description="The new sentences to be added to the existing summary",example=["sentence1","sentence2"])
+    indices:List[int]=Field(description="The indices where the new sentences should be inserted",example=[1,2])
+    
 class CommunitySummary:
     def __init__(self, graph,llm,community_dir,create):
         self.graph = graph
@@ -21,6 +27,7 @@ class CommunitySummary:
         self.node_to_community_mapping={}
         if not os.path.exists(self.community_dir):
             os.makedirs(self.community_dir)
+        
         if create:
             self.generate_summary()
         else:
@@ -56,7 +63,7 @@ class CommunitySummary:
     def generate_summary(self):
         first_level_communities = self._girvan_newman_communities()
 
-        for community in first_level_communities:
+        for i,community in enumerate(first_level_communities):
             community_description = ""
 
             for node in community:
@@ -69,8 +76,95 @@ class CommunitySummary:
             community_class=Community.model_validate(from_json(response,allow_partial=True))
 
             for node in community:
-                self.node_to_community_mapping[node]=community_class.community_name
+                self.node_to_community_mapping[node]=(i,community_class.community_name)
 
             self._save_community(community_class)
         self._save_community_mapping()
+    
+
+
             
+
+class UpdateCommunities(CommunitySummary):
+
+    def __init__(self,updated_nodes):
+        super().__init__()
+        self.updated_nodes=set(updated_nodes)
+        self.update_community_template=PromptTemplate(template=update_community_prompt,input_variables=["existing_summary","updated_nodes"])
+        self.update_chain=self.update_community_template | self.llm
+    def _identify_new_communities(self):
+        communities_generator = girvan_newman(self.graph)
+        first_level_communities = next(communities_generator)
+        return sorted(map(sorted, first_level_communities))
+    
+    def _load_node_to_community_mapping(self,community_dir):
+        with open(f"{community_dir}/node_to_community_mapping.pkl", "rb") as f:
+            node_to_community_mapping = pickle.load(f)
+        return node_to_community_mapping
+    
+    def compare_communities(self,community_dir):
+
+        self.new_communities=self._identify_new_communities()
+        old_node_to_community_mapping=self._load_node_to_community_mapping(community_dir)
+        self.max_indexed_community=max([val[0] for val in old_node_to_community_mapping.values()])
+    
+        for i,community in enumerate(self.new_communities):
+            for node in community:
+                if node not in old_node_to_community_mapping or old_node_to_community_mapping[node][0]!=i:
+                    self.updated_nodes.add(node)
+                    
+  
+            
+    def update_communities(self):
+        for i,community in enumerate(self.new_communities):
+            if i>self.max_indexed_community: # new community
+                community_description = ""
+
+                for node in community:
+                    community_description+= self.graph.nodes[node].get("description","")
+
+                response=self.chain.invoke({"input_text":community_description})
+                if isinstance(response,AIMessage):
+                    response=response.content
+                response=response[response.find("{"):response.rfind("}")]+"}"
+                community_class=Community.model_validate(from_json(response,allow_partial=True))
+
+                for node in community:
+                    self.node_to_community_mapping[node]=(i,community_class.community_name)
+
+            
+            else: #modify existing community
+                community_class=self.load_community(i)
+                community_description = community_class.community_description.split(".")
+                updated_nodes=[node for node in community if self.node_to_community_mapping[node][0]!=i or node in self.updated_nodes]
+                updated_nodes_descriptions=""
+
+                for node in updated_nodes:
+                    updated_nodes_descriptions+=self.graph.nodes[node].get("description","")
+
+                response=self.update_chain.invoke({"existing_summary":community_description,"updated_nodes":updated_nodes_descriptions})
+                if isinstance(response,AIMessage):
+                    response=response.content
+                response=response[response.find("{"):response.rfind("}")]+"}"
+
+                update_class=Update_Community.model_validate(from_json(response,allow_partial=True))
+                for i,sentence in enumerate(update_class.new_sentences):
+                    community_description=community_description[:update_class.indices[i]]+sentence+community_description[update_class.indices[i]:]
+                community_class.community_description=community_description
+            
+                for node in updated_nodes:
+                    self.node_to_community_mapping[node]=(i,community_class.community_name)
+                pass
+                self._save_community()
+        self._save_community_mapping()
+
+        
+                
+                    
+                    
+                    
+
+                    
+        
+        
+

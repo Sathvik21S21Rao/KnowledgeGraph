@@ -20,3 +20,4 @@ Query: {query}
 Output:
 """
 
+query_template = """Based on the following context answer the query and the following chat history\n\nContext:{context}\n\nChat history:{chat_history}\n\n Query: {query}. Do not give reasoning of the answer. Just answer the query without missing out on any detail."""
