@@ -13,3 +13,5 @@ faiss-cpu
 pysqlite-binary
 chromadb
 matplotlib
+lxml 
+html2text
