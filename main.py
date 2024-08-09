@@ -6,6 +6,8 @@ from rich.prompt import Prompt
 from rich.markdown import Markdown
 import os
 import warnings
+from checkDataUpdates.checkFileUpdates import SyncData
+from Graph_Generation.graph_extraction import *
 
 warnings.filterwarnings("ignore")
 console = Console()
@@ -133,4 +135,14 @@ if __name__ == "__main__":
         create_graph = True
     else:
         create_graph = False
+        with console.status("[bold green]Checking for update..."):
+            sync=SyncData(folder=config["data_path"],temp_folder="./.temp")
+            updates=sync.compareFolders()
+            if updates:
+                print(updates)
+                console.print("[bold red]Data update found.[/bold red]")
+                sync.syncTempFolder()
+
+
+
     main(create_graph)
