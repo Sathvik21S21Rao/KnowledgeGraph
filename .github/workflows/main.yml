@@ -16,8 +16,7 @@ jobs:
         python-version: '3.10'
 
     - name: Set up environment
-      run: |
-        echo "API_KEY=${{ secrets.API_KEY }}" >> $GITHUB_ENV
+      env: ${{ secrets.API_KEY }}
 
     - name: Create necessary directories
       run: |
