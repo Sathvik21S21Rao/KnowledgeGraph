@@ -52,7 +52,7 @@ def initialize_embedding_model(config):
         return None
 
 
-api_key = os.getenv("API_KEY")
+api_key = os.environ.get("API_KEY")
 
 config = {
     "data_path": "data_test",
