@@ -160,12 +160,11 @@ class PrepareDataForNX:
         return entities,relations
     
 class UpdateGraph(PrepareDataForNX):
-    def __init__(self,graph,graph_path,data_path):
+    def __init__(self,graph,graph_path):
         super().__init__()
         self.graph=graph
         self.graph_path=graph_path
-        self.data_path=data_path
-        
+       
     def update_graph(self,entities,relations):
         updated_nodes=[]
         added_nodes=[]
