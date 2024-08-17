@@ -120,7 +120,6 @@ class ContextBasedNodeRetrieval:
         if len(similar_nodes.node_names)/len(self.graph.nodes)>0.4:
             communities=set()
             for node in similar_nodes.node_names:
-                print(self.community.node_to_community_mapping)
                 if self.community.node_to_community_mapping.get(node):
                     communities.add(self.community.node_to_community_mapping[node][1])
             for community in communities:

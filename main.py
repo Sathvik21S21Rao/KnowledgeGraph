@@ -6,11 +6,21 @@ from rich.prompt import Prompt
 from rich.markdown import Markdown
 import os
 import warnings
-from checkDataUpdates.checkFileUpdates import SyncData
+from checkDataUpdates.checkFileUpdates import SyncData,create_temp_folder
 from Graph_Generation.graph_extraction import *
+from Community_Generation.communitySummary import UpdateCommunities
+
 
 warnings.filterwarnings("ignore")
 console = Console()
+
+def load_graph(graph_path):
+    with open(graph_path, "rb") as f:
+        return pickle.load(f)
+
+def save_graph(graph, graph_path):
+    with open(graph_path, "wb") as f:
+        pickle.dump(graph, f)
 
 def read_config(file_path):
     with open(file_path, 'r') as file:
@@ -133,16 +143,25 @@ if __name__ == "__main__":
     create_graph=input("Create a new graph? (y/n): ")
     if create_graph.lower() == 'y':
         create_graph = True
+        create_temp_folder(config["data_path"],community_data_dir)
+
     else:
         create_graph = False
         with console.status("[bold green]Checking for update..."):
             sync=SyncData(folder=config["data_path"],temp_folder="./.temp")
             updates=sync.compareFolders()
             if updates:
-                print(updates)
                 console.print("[bold red]Data update found.[/bold red]")
+                updates="\n".join(updates)
+                updates=DataLoader(path=None,chunk_overlap=chunk_overlap,chunk_size=chunk_size).load_text(updates)
                 sync.syncTempFolder()
+                chain=GraphExtractionChain(llm=llm)
+                graph=load_graph(graph_file_path)
+                updated_nodes,added_nodes,added_edges=UpdateGraph(graph=graph,graph_path=graph_file_path).execute(updates,chain)
 
-
+                
+                updated_nodes=[node[0] for node in updated_nodes+added_nodes]
+               
+                UpdateCommunities(graph=graph,llm=llm,community_dir=community_data_dir,create=False,updated_nodes=updated_nodes).update_communities()
 
     main(create_graph)
