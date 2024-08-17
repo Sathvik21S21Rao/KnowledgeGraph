@@ -35,7 +35,7 @@ def initialize_llm(config):
         return OllamaFunctions(model=config["model"], temperature=config["temperature"])
     elif config.get("server").lower() == "groq":
         from langchain_groq import ChatGroq
-        return ChatGroq(temperature=config["temperature"], model=config["model"], api_key=config.get("api_key"))
+        return ChatGroq(temperature=config["temperature"], model=config["model"], groq_api_key=config.get("api_key"))
     else:
         raise ValueError("Invalid server configuration")
     
