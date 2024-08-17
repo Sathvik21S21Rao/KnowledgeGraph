@@ -11,6 +11,7 @@ from Graph_Generation.graph_extraction import GraphExtractionChain, DataLoader, 
 from Community_Generation.communitySummary import UpdateCommunities
 from Graph_Retrieval.context_based_node_retrieval import ContextBasedNodeRetrieval
 from Graph_Retrieval.query import Query
+from testing_data import intitial_data, update_data
 
 
 # Function definitions
@@ -90,14 +91,22 @@ sentence_model_name = config.get("sentence_model_name")
 use_sentence_embeddings = config.get("use_sentence_embeddings")
 llm = initialize_llm(config)
 
+
 # Unit test class for graph creation
 class TestGraphCreation(unittest.TestCase):
+
+    def setUp(self):
+        """Setup the initial graph and other resources"""
+        os.mkdir(config["data_path"])
+        with open(config["data_path"] + "/data", "w") as f:
+            f.write(intitial_data)
+        create_temp_folder(config["data_path"],community_data_dir)
+
     def test_graph_creation(self):
         """Test graph creation from data"""
         chain = GraphExtractionChain(llm=llm)
         data = DataLoader(path=config["data_path"], chunk_size=chunk_size, chunk_overlap=chunk_overlap).load()
         NxData = PrepareDataForNX().execute(data, chain)
-        create_temp_folder(config["data_path"],community_data_dir)
         graph = nx.Graph()
         graph.add_nodes_from(NxData[0])
         graph.add_edges_from(NxData[1])
@@ -119,26 +128,7 @@ class TestGraphUpdate(unittest.TestCase):
 
     def test_graph_updation(self):
         """Test graph updation after detecting changes in the data"""
-        # Assume some updates have been made in the data directory
-        # Simulate sync and graph update
-        update_data="""As the friends settled back into their daily lives, the memories of their adventure lingered. They often gathered to reminisce, each retelling of their journey bringing new details and laughter. However, the island's allure was not easily forgotten. Raj, ever the adventurer, proposed a return trip, this time with better preparation and equipment. The idea was met with a mix of excitement and apprehension.
-
-Months passed, and the group found themselves drawn back to the island, not just for the thrill but to uncover its secrets. They spent their time researching, gathering advanced gear, and honing their survival skills. Harish designed a more reliable GPS system, while Vikram studied the island's flora and fauna in greater detail. Neha and Priya took first aid courses, ensuring they were ready for any emergencies.
-
-When they finally set foot on the island again, it felt both familiar and new. This time, they were determined to explore the parts they had missed. They ventured deeper into the jungle, discovering hidden waterfalls, ancient ruins, and mysterious caves. Each discovery brought a sense of wonder and accomplishment.
-
-One evening, as they sat around the campfire, Asha shared a theory she had been developing. She believed the island held more than just natural beauty; it might be the site of a lost civilization. The ruins they had found hinted at advanced architecture and tools. Intrigued, the group decided to focus their efforts on uncovering more about this potential civilization.
-
-Days turned into weeks as they meticulously documented their findings. They unearthed artifacts, deciphered ancient symbols, and pieced together the island's history. Their discoveries attracted the attention of historians and archaeologists, turning their adventure into a significant academic pursuit.
-
-The island, once a place of peril and mystery, became a beacon of knowledge and exploration. The friends' bond grew stronger as they worked together, each contributing their unique skills. Their story evolved from a tale of survival to one of discovery and legacy.
-
-Years later, their findings were published, and the island was recognized as a site of historical importance. The friends, now celebrated explorers and scholars, often returned to the island, not just as adventurers but as guardians of its secrets. Their journey had come full circle, transforming them from curious graduates to pioneers of knowledge.
-
-And so, the legend of "The Lost Expedition" continued to inspire, reminding everyone that with courage, curiosity, and camaraderie, even the most daunting challenges could lead to extraordinary discoveries.
-
-So, the story is the same, but the formatting is different. The formatting in the .temp/data file is more readable, with line breaks and indentation. The formatting in the .temp/data/data file is a single block of text, making it harder to read. This shows the importance of formatting in making text more accessible and easier to read."""
-
+        
         with open(config["data_path"] + "/data", "a") as f:
             f.write(update_data)
         sync = SyncData(folder=config["data_path"], temp_folder="./.temp")
