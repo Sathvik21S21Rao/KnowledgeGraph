@@ -139,7 +139,9 @@ class UpdateCommunities(CommunitySummary):
                 response=self.chain.invoke({"input_text":community_description})
                 if isinstance(response,AIMessage):
                     response=response.content
+                print(response)
                 response=response[response.find("{"):response.rfind("}")]+"}"
+                
                 community_class=Community.model_validate(from_json(response,allow_partial=True))
                 
 

@@ -9,13 +9,13 @@ import langchain_core.messages.ai
 from pydantic_core import from_json
 from Graph_Retrieval.prompts import *
 from Community_Generation.communitySummary import *
-
+from Graph_Retrieval.vector_retreival import VectorStore
 
 class NodeOutput(BaseModel):
     node_names: List[str] = Field(description="The names of the relevant nodes", example=["node1", "node2", "node3"])
 
 class ContextBasedNodeRetrieval:
-    def __init__(self, llm, graph,node2vec_model_path,data_dir="node_data",community_data="community_data",create=False,embeddings=None):
+    def __init__(self, llm, graph,node2vec_model_path,data_dir="node_data",community_data="community_data",create=False,embeddings=None,vectorstore=None):
         self.llm = llm
         self.data_dir = data_dir
         self.community_data=community_data
@@ -23,9 +23,10 @@ class ContextBasedNodeRetrieval:
         self.graph=graph
         self.node2vec_model_path=node2vec_model_path
         self.create=create
-        self.embeddings=embeddings
+        self.vectorstore=vectorstore
+
         self.community=CommunitySummary(self.graph,self.llm,self.community_data,self.create)
-        
+        print("Communities",os.listdir(self.community_data))
         
     def setup(self):
         if self.create:
@@ -40,8 +41,6 @@ class ContextBasedNodeRetrieval:
         with open(f"{self.data_dir}/node.txt", "w") as f:
             for node in self.graph.nodes():
                 f.write(f"{node}\n")
-
-        
         
     def _create_node2vec_model(self):
         
@@ -74,8 +73,9 @@ class ContextBasedNodeRetrieval:
             | prompt
             | self.llm
         )
-        
-        response = rag_chain.invoke({"context": open(f"{self.data_dir}/node.txt").read(), "query": query, "chat_history": self.chat_history[-5:]})
+        with open(f"{self.data_dir}/node.txt", "r") as f:
+            node_names = f.read().split("\n")
+        response = rag_chain.invoke({"context": node_names, "query": query, "chat_history": self.chat_history[-5:]})
         
         if isinstance(response, langchain_core.messages.ai.AIMessage):
             response = response.content
@@ -83,10 +83,8 @@ class ContextBasedNodeRetrieval:
         response = response[response.find("{"):response.rfind("}") + 1]
         
         response = NodeOutput.model_validate(from_json(response, allow_partial=True))
-
-        
-        
         return response
+                            
 
     def _get_node_descriptions(self, nodes)->dict:
         return {node:self.graph.nodes[node].get("description") for node in nodes}

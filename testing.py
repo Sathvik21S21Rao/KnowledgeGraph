@@ -12,7 +12,7 @@ from Community_Generation.communitySummary import UpdateCommunities
 from Graph_Retrieval.context_based_node_retrieval import ContextBasedNodeRetrieval
 from Graph_Retrieval.query import Query
 from testing_data import intitial_data, update_data
-
+from Graph_Retrieval.vector_retreival import VectorStore
 
 # Function definitions
 def load_graph(graph_path):
@@ -22,6 +22,7 @@ def load_graph(graph_path):
 def save_graph(graph, graph_path):
     with open(graph_path, "wb") as f:
         pickle.dump(graph, f)
+
 
 def initialize_llm(config):
     if config.get("server").lower() == "openai" and config.get("api_key"):
@@ -60,9 +61,12 @@ config = {
     "chunk_overlap": 128,
     "api_key": api_key,
     "server": "Groq",
-    "model": "llama-3.1-8b-instant",
+    "model": "llama-3.1-70b-versatile",
+    "embedding_server": "ollama",
+    "embedding_model": "nomic-embed-text",
     "temperature": 0.5,
     "use_sentence_embeddings": False,
+    "vectorstore_path": "./model_test/vectorstore_test",
     "node2vec_model_path": "./model_test/node2vec.model",
     "sentence_model_path": "./model_test/sentence.model",
     "node2vec_embeddings_path": "./embeddings_test/node2vec_embeddings.npy",
@@ -89,9 +93,10 @@ node_names_path = config.get("node_names_path")
 faiss_model_path = config.get("faiss_model_path")
 sentence_model_name = config.get("sentence_model_name")
 use_sentence_embeddings = config.get("use_sentence_embeddings")
+vectorstore_path = config.get("vectorstore_path")
+collection_name = config.get("collection_name")
 llm = initialize_llm(config)
-
-
+start_chunk=0
 # Unit test class for graph creation
 class TestGraphCreation(unittest.TestCase):
 
@@ -104,10 +109,13 @@ class TestGraphCreation(unittest.TestCase):
 
     def test_graph_creation(self):
         """Test graph creation from data"""
+        global start_chunk
         chain = GraphExtractionChain(llm=llm)
         data = DataLoader(path=config["data_path"], chunk_size=chunk_size, chunk_overlap=chunk_overlap).load()
         NxData = PrepareDataForNX().execute(data, chain)
         graph = nx.Graph()
+        vectorstore = VectorStore(embedding=initialize_embedding_model(config), persist_dir=vectorstore_path, collection_name=collection_name, create=True, documents=data, metadata=[{"chunk_id": i} for i in range(len(data))])
+        start_chunk=len(vectorstore.get_vectorstore().get())
         graph.add_nodes_from(NxData[0])
         graph.add_edges_from(NxData[1])
         save_graph(graph, graph_file_path)
@@ -142,7 +150,7 @@ class TestGraphUpdate(unittest.TestCase):
             chain = GraphExtractionChain(llm=llm)
             updated_graph = load_graph(graph_file_path)
             updated_nodes, added_nodes, added_edges = UpdateGraph(
-                graph=updated_graph, graph_path=graph_file_path
+                graph=updated_graph, graph_path=graph_file_path,start_chunk=start_chunk
             ).execute(updates, chain)
             
             updated_nodes = [node[0] for node in updated_nodes + added_nodes]
@@ -150,7 +158,7 @@ class TestGraphUpdate(unittest.TestCase):
             # Update communities based on the new graph structure
             UpdateCommunities(
                 graph=updated_graph, llm=llm, community_dir=community_data_dir,
-                create=False, updated_nodes=updated_nodes
+                create=False, updated_nodes=updated_nodes,
             ).update_communities()
             
             save_graph(updated_graph, graph_file_path)
@@ -179,3 +187,18 @@ class TestQuery(unittest.TestCase):
         self.assertTrue(response)
 
 
+
+if __name__ == "__main__":
+    suite1 = unittest.TestSuite()
+    suite2 = unittest.TestSuite()
+    # Adding tests in the desired order
+    suite1.addTest(unittest.makeSuite(TestGraphCreation))
+    suite1.addTest(unittest.makeSuite(TestQuery))
+
+    suite2.addTest(unittest.makeSuite(TestGraphUpdate))
+    suite2.addTest(unittest.makeSuite(TestQuery))
+
+    # Running the tests sequentially
+    runner = unittest.TextTestRunner()
+    runner.run(suite1)
+    runner.run(suite2)

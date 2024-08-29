@@ -100,9 +100,35 @@ class DataLoader:
         
         with open(self.path) as fh:
             text=fh.read()
+        
         return self.text_splitter.split_text(text)
     def load_text(self,text):
         return self.text_splitter.split_text(text)
+    
+class DataSaver:
+    def __init__(self,path,chunks,update=False):
+        self.path=path
+        self.chunks=chunks
+        self.update=update
+    def save(self):
+        if self.update:
+            with open(self.path,"wb") as fh:
+                id_to_chunk={i:chunk for i,chunk in enumerate(self.chunks)}
+                pickle.dump(id_to_chunk,fh)
+            start_chunk=0
+        else:
+            with open(self.path,"rb") as fh:
+                id_to_chunk=pickle.load(fh)
+            start_chunk=len(id_to_chunk)
+            with open(self.path,"wb") as fh:
+                for i,chunk in enumerate(self.chunks):
+                    id_to_chunk[len(id_to_chunk)+i]=chunk
+                pickle.dump(id_to_chunk,fh)
+        return start_chunk
+        
+    def load_id_to_chunk(self):
+        with open(self.path,"rb") as fh:
+            return pickle.load(fh)
 
 class PrepareDataForNX:
     def __init__(self):
@@ -160,10 +186,11 @@ class PrepareDataForNX:
         return entities,relations
     
 class UpdateGraph(PrepareDataForNX):
-    def __init__(self,graph,graph_path):
+    def __init__(self,graph,graph_path,start_chunk):
         super().__init__()
         self.graph=graph
         self.graph_path=graph_path
+        self.start_chunk=start_chunk
        
     def update_graph(self,entities,relations):
         updated_nodes=[]
@@ -189,7 +216,7 @@ class UpdateGraph(PrepareDataForNX):
         nodes={node[0]:[node[1].get("description"),node[1].get("chunk_ids")] for node in self.graph.nodes(data=True)}
         edges={(edge[0],edge[1]):[edge[2].get("description"),edge[2].get("chunk_ids")] for edge in self.graph.edges(data=True)}
 
-        self.entities,self.relations=PrepareDataForNX.load_data_from_llm(data,chain,nodes,edges,start_chunk=10)
+        self.entities,self.relations=PrepareDataForNX.load_data_from_llm(data,chain,nodes,edges,start_chunk=self.start_chunk)
         entities=PrepareDataForNX.transform_dict_to_nx_format(self.entities)
         relations=PrepareDataForNX.transform_dict_to_nx_format(self.relations,relation=True)
         updated_nodes,added_nodes,added_edges=self.update_graph(entities=entities,relations=relations)
