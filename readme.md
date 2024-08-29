@@ -1,3 +1,4 @@
+[![Knowledge graph workflow](https://github.com/Sathvik21S21Rao/KnowledgeGraph/actions/workflows/main.yml/badge.svg)](https://github.com/Sathvik21S21Rao/KnowledgeGraph/actions/workflows/main.yml)
 # GraphRAG
 
 GraphRAG is a **Python project** that uses **graph-based methods** for information retrieval. It uses **language models** and **embeddings** to create and interact with a **graph of data**.
