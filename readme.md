@@ -82,3 +82,11 @@ When running `main.py`, you will be asked whether you want to create a **new gra
 
 Once the application is running, you can interact with it by typing **queries** into the console. The application will respond with information retrieved from the graph based on your query. To end the conversation, type **'exit'**.
 
+## Visualisation of graph
+
+- Built using the data in [testing_data.py](https://github.com/Sathvik21S21Rao/KnowledgeGraph/blob/main/testing_data.py)
+- The nodes of the same colour are part of the same community
+
+![Figure_1](https://github.com/user-attachments/assets/11dbd28b-3da0-45b7-a9bf-b608774f3e4b)
+
+
