@@ -11,10 +11,10 @@ class VectorStore:
         self.metadata = metadata
         if create:
             self._create_vectorstore()
+        elif update:
+            self._update_vectorstore()
         else:
             self._load_vectorstore()
-            if update:
-                self._update_vectorstore()
 
     def _create_vectorstore(self):
  
@@ -33,12 +33,17 @@ class VectorStore:
     
     def _load_vectorstore(self):
         self.vectorstore = Chroma(
-            persist_dir=self.persist_dir,
+            persist_directory=self.persist_dir,
             collection_name=self.collection_name,
             embedding_function=self.embedding,
         )
     
     def _update_vectorstore(self):
+        self.vectorstore = Chroma(
+            persist_directory=self.persist_dir,
+            collection_name=self.collection_name,
+            embedding_function=self.embedding,
+        )
         if self.vectorstore:
             # Ensure documents and metadata are lists of the same length
             if self.documents and self.metadata and len(self.documents) == len(self.metadata):

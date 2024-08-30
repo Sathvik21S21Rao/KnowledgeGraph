@@ -9,7 +9,8 @@ import warnings
 from checkDataUpdates.checkFileUpdates import SyncData,create_temp_folder
 from Graph_Generation.graph_extraction import *
 from Community_Generation.communitySummary import UpdateCommunities
-
+from langchain_community.embeddings import OllamaEmbeddings
+from Graph_Retrieval.vector_retreival import VectorStore
 
 warnings.filterwarnings("ignore")
 console = Console()
@@ -75,6 +76,7 @@ node_names_path = config.get("node_names_path")
 faiss_model_path = config.get("faiss_model_path")
 sentence_model_name = config.get("sentence_model_name")
 use_sentence_embeddings = config.get("use_sentence_embeddings")
+chunk_path=config.get("chunk_path")
 
 
 
@@ -94,6 +96,7 @@ def main(create_graph):
             data = DataLoader(path=config["data_path"], chunk_size=chunk_size, chunk_overlap=chunk_overlap).load()
             NxData = PrepareDataForNX().execute(data, chain)
             graph = nx.Graph()
+            vectorstore=VectorStore(embedding=initialize_embedding_model(config),persist_dir=node_vectorstore_path,collection_name=collection_name,create=True,documents=data,metadata=[{"chunk_id":i} for i in range(len(data))])
             graph.add_nodes_from(NxData[0])
             graph.add_edges_from(NxData[1])
             
@@ -145,23 +148,33 @@ if __name__ == "__main__":
         create_graph = True
         create_temp_folder(config["data_path"],community_data_dir)
 
+
     else:
         create_graph = False
+        
         with console.status("[bold green]Checking for update..."):
             sync=SyncData(folder=config["data_path"],temp_folder="./.temp")
             updates=sync.compareFolders()
             if updates:
                 console.print("[bold red]Data update found.[/bold red]")
+
                 updates="\n".join(updates)
                 updates=DataLoader(path=None,chunk_overlap=chunk_overlap,chunk_size=chunk_size).load_text(updates)
+
+                start_chunk=len(VectorStore(embedding=initialize_embedding_model(config),persist_dir=node_vectorstore_path,collection_name=collection_name,create=False,update=False).get_vectorstore().get()["documents"])
+
+        
+                vectorstore=VectorStore(embedding=initialize_embedding_model(config),persist_dir=node_vectorstore_path,collection_name=collection_name,create=False,update=True,documents=updates,metadata=[{"chunk_id":i} for i in range(start_chunk,start_chunk+len(updates))])
+                
                 sync.syncTempFolder()
                 chain=GraphExtractionChain(llm=llm)
                 graph=load_graph(graph_file_path)
-                updated_nodes,added_nodes,added_edges=UpdateGraph(graph=graph,graph_path=graph_file_path).execute(updates,chain)
+                start_chunk=0
+                updated_nodes,added_nodes,added_edges=UpdateGraph(graph=graph,graph_path=graph_file_path,start_chunk=start_chunk).execute(updates,chain)
 
                 
                 updated_nodes=[node[0] for node in updated_nodes+added_nodes]
-               
                 UpdateCommunities(graph=graph,llm=llm,community_dir=community_data_dir,create=False,updated_nodes=updated_nodes).update_communities()
+                
 
     main(create_graph)

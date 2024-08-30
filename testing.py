@@ -115,7 +115,7 @@ class TestGraphCreation(unittest.TestCase):
         NxData = PrepareDataForNX().execute(data, chain)
         graph = nx.Graph()
         vectorstore = VectorStore(embedding=initialize_embedding_model(config), persist_dir=vectorstore_path, collection_name=collection_name, create=True, documents=data, metadata=[{"chunk_id": i} for i in range(len(data))])
-        start_chunk=len(vectorstore.get_vectorstore().get())
+        start_chunk=len(vectorstore.get_vectorstore().get()["documents"])
         graph.add_nodes_from(NxData[0])
         graph.add_edges_from(NxData[1])
         save_graph(graph, graph_file_path)
@@ -147,6 +147,9 @@ class TestGraphUpdate(unittest.TestCase):
             updates = DataLoader(path=None, chunk_overlap=chunk_overlap, 
             chunk_size=chunk_size).load_text(updates)
             sync.syncTempFolder()
+            vectorstore=VectorStore(embedding=initialize_embedding_model(config),persist_dir=vectorstore_path,collection_name=collection_name,create=False,update=True,documents=updates,metadata=[{"chunk_id":i} for i in range(start_chunk,start_chunk+len(updates))])
+
+            print("Start chunk:", start_chunk)
             chain = GraphExtractionChain(llm=llm)
             updated_graph = load_graph(graph_file_path)
             updated_nodes, added_nodes, added_edges = UpdateGraph(
