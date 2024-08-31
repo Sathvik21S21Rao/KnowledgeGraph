@@ -174,7 +174,10 @@ class UpdateCommunities(CommunitySummary):
                 except:
                     raise Exception(f"Error in updating community {community_class.community_name} with response {response}")
                 for i,sentence in enumerate(update_class.new_sentences):
-                    community_description=community_description[:i+update_class.indices[i]]+[sentence]+community_description[i+update_class.indices[i]:]
+                    try:
+                        community_description=community_description[:i+update_class.indices[i]]+[sentence]+community_description[i+update_class.indices[i]:]
+                    except:
+                        break
                 community_class.community_description=".".join(community_description)
             
                 for node in updated_nodes:
