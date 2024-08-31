@@ -17,7 +17,7 @@ The project is structured as follows:
 
 ## How to Run
 
-### Tested to be working on python 3.8 versions
+### Tested to be working on python 3.8 and 3.10 versions
 1. **Clone the repository**
 ```bash
 git clone https://github.com/Sathvik21S21Rao/KnowledgeGraph.git
