@@ -64,7 +64,7 @@ class GraphExtractionChain:
         
         chain=self.templates[2] | self.llm
         response=chain.invoke({"entities":entities,"input_text":input_text})
-        if isinstance(response,langchain_core.messages.ai.AIMessage):
+        if isinstance(response,langchain_core.messages.ai.AIMessage) or not isinstance(response,str):
             response=response.content
         response=response[response.find("{"):response.rfind("}")+1]
         

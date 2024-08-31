@@ -77,6 +77,7 @@ faiss_model_path = config.get("faiss_model_path")
 sentence_model_name = config.get("sentence_model_name")
 use_sentence_embeddings = config.get("use_sentence_embeddings")
 chunk_path=config.get("chunk_path")
+vectorstore_path=config.get("vectorstore_path")
 
 
 
@@ -96,7 +97,7 @@ def main(create_graph):
             data = DataLoader(path=config["data_path"], chunk_size=chunk_size, chunk_overlap=chunk_overlap).load()
             NxData = PrepareDataForNX().execute(data, chain)
             graph = nx.Graph()
-            vectorstore=VectorStore(embedding=initialize_embedding_model(config),persist_dir=node_vectorstore_path,collection_name=collection_name,create=True,documents=data,metadata=[{"chunk_id":i} for i in range(len(data))])
+            vectorstore=VectorStore(embedding=initialize_embedding_model(config),persist_dir=vectorstore_path,collection_name=collection_name,create=True,documents=data,metadata=[{"chunk_id":i} for i in range(len(data))])
             graph.add_nodes_from(NxData[0])
             graph.add_edges_from(NxData[1])
             
@@ -161,10 +162,10 @@ if __name__ == "__main__":
                 updates="\n".join(updates)
                 updates=DataLoader(path=None,chunk_overlap=chunk_overlap,chunk_size=chunk_size).load_text(updates)
 
-                start_chunk=len(VectorStore(embedding=initialize_embedding_model(config),persist_dir=node_vectorstore_path,collection_name=collection_name,create=False,update=False).get_vectorstore().get()["documents"])
+                start_chunk=len(VectorStore(embedding=initialize_embedding_model(config),persist_dir=vectorstore_path,collection_name=collection_name,create=False,update=False).get_vectorstore().get()["documents"])
 
         
-                vectorstore=VectorStore(embedding=initialize_embedding_model(config),persist_dir=node_vectorstore_path,collection_name=collection_name,create=False,update=True,documents=updates,metadata=[{"chunk_id":i} for i in range(start_chunk,start_chunk+len(updates))])
+                vectorstore=VectorStore(embedding=initialize_embedding_model(config),persist_dir=vectorstore_path,collection_name=collection_name,create=False,update=True,documents=updates,metadata=[{"chunk_id":i} for i in range(start_chunk,start_chunk+len(updates))])
                 
                 sync.syncTempFolder()
                 chain=GraphExtractionChain(llm=llm)

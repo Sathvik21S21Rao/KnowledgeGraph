@@ -1,4 +1,5 @@
 [![Knowledge graph workflow](https://github.com/Sathvik21S21Rao/KnowledgeGraph/actions/workflows/main.yml/badge.svg)](https://github.com/Sathvik21S21Rao/KnowledgeGraph/actions/workflows/main.yml)
+
 # GraphRAG
 
 GraphRAG is a **Python project** that uses **graph-based methods** for information retrieval. It uses **language models** and **embeddings** to create and interact with a **graph of data**.
@@ -81,6 +82,15 @@ The updation community prompt has been optimised so as to return minimum number 
 When running `main.py`, you will be asked whether you want to create a **new graph**. If you choose not to create a new graph, the program will attempt to **load a graph** from the specified path.
 
 Once the application is running, you can interact with it by typing **queries** into the console. The application will respond with information retrieved from the graph based on your query. To end the conversation, type **'exit'**.
+
+## Future scope
+
+1. An interactive UI for seamless user experience
+2. Integrating vector search along with graph search
+3. Allowing users to maintain multiple graphs.
+4. Shifting from in memory graph computation to disk based retrieval
+
+## Tested to work with Groq(LLama3.1-70b) and Ollama Embedding(nomic-embed-text)
 
 ## Visualisation of graph
 

@@ -26,7 +26,7 @@ class ContextBasedNodeRetrieval:
         self.vectorstore=vectorstore
 
         self.community=CommunitySummary(self.graph,self.llm,self.community_data,self.create)
-        print("Communities",os.listdir(self.community_data))
+        
         
     def setup(self):
         if self.create:
